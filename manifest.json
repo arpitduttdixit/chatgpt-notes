@@ -8,7 +8,7 @@
       "default_title": "ChatGPT"
    },
    "background": {
-      "service_worker": "background.js"
+      "service_worker": "background-entry.js"
    },
    "commands": {
       "open-codex-side-panel": {
@@ -24,6 +24,12 @@
       "js": [ "content-scripts/chatgpt-website.js" ],
       "matches": [ "https://chatgpt.com/*" ],
       "run_at": "document_end"
+   }, {
+      "all_frames": false,
+      "css": [ "content-scripts/saved-chat-annotations.css" ],
+      "js": [ "content-scripts/saved-chat-annotations.js" ],
+      "matches": [ "http://*/*", "https://*/*" ],
+      "run_at": "document_idle"
    } ],
    "content_security_policy": {
       "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://ab.chatgpt.com https://chatgpt.com https://api.openai.com https://api.openai.org; font-src 'self' https://cdn.openai.com;",
