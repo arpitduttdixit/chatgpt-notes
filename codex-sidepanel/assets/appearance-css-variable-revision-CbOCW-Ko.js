@@ -1,0 +1,1 @@
+import{F as e,et as t}from"./reduced-motion-preference-M5PMNiMW.js";var n=t(e,Symbol());function r(e){e.set(n,Symbol())}export{r as n,n as t};

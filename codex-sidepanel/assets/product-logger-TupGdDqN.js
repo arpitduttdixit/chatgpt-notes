@@ -1,0 +1,1 @@
+import{F as e,et as t}from"./reduced-motion-preference-M5PMNiMW.js";var n={logProductEvent:()=>{},logEventWithStatsig:()=>{},trackCounter:async()=>{},flush:async()=>{},submitCodexAnalyticsEvent:null},r=t(e,n),i=t(e,!1);function a(e,t,n){e.get(r).logProductEvent(t,n)}export{r as i,n,i as r,a as t};

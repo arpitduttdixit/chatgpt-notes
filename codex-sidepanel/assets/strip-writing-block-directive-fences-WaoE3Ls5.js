@@ -1,0 +1,3 @@
+var e=`:::writing`,t=RegExp(`^ {0,3}${e}(?:\\{.*)?\\s*$`),n=/^ {0,3}:::\s*$/;function r(r){if(!r.includes(e))return r;let a=[],o=!1,s=null;for(let e of r.split(`
+`)){let r=s!=null;if(s=i(s,e),r||s!=null){a.push(e);continue}if(t.test(e)){o=!0;continue}if(o&&n.test(e)){o=!1;continue}a.push(e)}return a.join(`
+`)}function i(e,t){let n=t.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);if(n==null)return e;let[,r=``,i=``]=n,a=r.startsWith("`")?"`":`~`;return e==null?a==="`"&&i.includes("`")?null:{length:r.length,marker:a}:a===e.marker&&r.length>=e.length&&i.trim().length===0?null:e}export{r as t};

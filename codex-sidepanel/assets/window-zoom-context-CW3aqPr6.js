@@ -1,0 +1,1 @@
+import{o as e}from"./rolldown-runtime-DAXXjFlN.js";import{r as t}from"./jsx-runtime-BJvgpPfO.js";import{n}from"./reduced-motion-preference-M5PMNiMW.js";var r=e(t(),1),i=n(`electron:window-zoom`,1),a=(0,r.createContext)(1);function o(){return(0,r.useContext)(a)}function s(e,t){return e/t}export{i,s as n,o as r,a as t};

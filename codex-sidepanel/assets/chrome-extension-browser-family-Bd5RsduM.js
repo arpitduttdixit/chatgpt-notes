@@ -1,0 +1,1 @@
+import{po as e}from"./index.browser-IPlrPleG.js";function t(){return e(globalThis.navigator)}export{t};

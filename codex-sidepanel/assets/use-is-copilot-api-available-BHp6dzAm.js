@@ -1,0 +1,1 @@
+import{n as e}from"./jsx-runtime-BJvgpPfO.js";import{A as t,F as n,H as r,P as i}from"./reduced-motion-preference-M5PMNiMW.js";e();var a=t(n,`is-copilot-api-available`,{staleTime:i.INFINITE});function o(){let{data:e}=r(a);return e?.available??!1}export{o as n,a as t};
