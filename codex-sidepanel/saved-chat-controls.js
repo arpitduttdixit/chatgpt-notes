@@ -6,14 +6,14 @@ const ROUTE_SESSION_KEY = "codex.chromeExtensionSidepanel.routeSessionId";
 
 const styles = document.createElement("style");
 styles.textContent = `
-  #chatgpt-save-selection-chat { position: fixed; right: 14px; top: 64px; z-index: 2147483647;
+  #chatgpt-save-selection-chat { position: fixed; left: 14px; top: 64px; z-index: 2147483647;
     display: none; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
     border-radius: 999px; background: #111; color: white; box-shadow: 0 5px 20px rgba(0,0,0,.22);
     cursor: pointer; font: 600 13px/1.1 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
   #chatgpt-save-selection-chat:hover { background: #292929; }
   #chatgpt-save-selection-chat:disabled { cursor: default; opacity: .72; }
   #chatgpt-save-selection-chat[data-visible="true"] { display: inline-flex; }
-  #chatgpt-save-selection-chat-status { position: fixed; right: 14px; top: 110px; z-index: 2147483647;
+  #chatgpt-save-selection-chat-status { position: fixed; left: 14px; top: 110px; z-index: 2147483647;
     max-width: 260px; padding: 8px 10px; border-radius: 9px; background: #fff; color: #222;
     box-shadow: 0 4px 18px rgba(0,0,0,.18); font: 12px/1.35 ui-sans-serif,sans-serif; }
   @media (prefers-color-scheme: dark) { #chatgpt-save-selection-chat-status { background:#2b2b2b; color:#f5f5f5; } }

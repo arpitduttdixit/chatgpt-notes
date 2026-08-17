@@ -26,6 +26,10 @@
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
+.chatgpt-saved-chat-marker[hidden] {
+  display: none !important;
+}
+
 .chatgpt-saved-chat-marker:hover,
 .chatgpt-saved-chat-marker:focus-visible {
   transform: scale(1.1);

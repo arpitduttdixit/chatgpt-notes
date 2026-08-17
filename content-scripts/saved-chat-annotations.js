@@ -192,13 +192,25 @@
   const positionMarker = (item) => {
     const rects = [...item.range.getClientRects()].filter((rect) => rect.width || rect.height);
     const rect = rects.at(-1);
-    if (!rect || rect.bottom < 0 || rect.top > innerHeight || rect.right < 0 || rect.left > innerWidth) {
+    if (!rect) {
       item.marker.hidden = true;
       return;
     }
-    item.marker.hidden = false;
-    item.marker.style.left = `${Math.min(innerWidth - 29, Math.max(4, rect.right + 5))}px`;
-    item.marker.style.top = `${Math.min(innerHeight - 29, Math.max(4, rect.top - 3))}px`;
+    const left = rect.right + 5;
+    const top = rect.top - 3;
+    const markerSize = 25;
+    const isFullyVisible = rect.top >= 0
+      && rect.bottom <= innerHeight
+      && rect.left >= 0
+      && rect.right <= innerWidth
+      && left >= 0
+      && top >= 0
+      && left + markerSize <= innerWidth
+      && top + markerSize <= innerHeight;
+    item.marker.hidden = !isFullyVisible;
+    if (!isFullyVisible) return;
+    item.marker.style.left = `${left}px`;
+    item.marker.style.top = `${top}px`;
   };
 
   const removeAnnotation = async (id) => {
