@@ -7,6 +7,29 @@
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.chatgpt-saved-chat-start-cap {
+  all: initial;
+  position: fixed;
+  box-sizing: border-box;
+  width: 3px;
+  border-radius: 2px;
+  background: #d49b00;
+  box-shadow: 0 0 0 1px color-mix(in srgb, white 65%, transparent);
+  opacity: 0.78;
+  pointer-events: none;
+  transition: background-color 120ms ease, opacity 120ms ease, width 120ms ease;
+}
+
+.chatgpt-saved-chat-start-cap[hidden] {
+  display: none !important;
+}
+
+.chatgpt-saved-chat-start-cap[data-active="true"] {
+  width: 4px;
+  background: #3b82f6;
+  opacity: 1;
+}
+
 .chatgpt-saved-chat-marker {
   all: initial;
   position: fixed;
@@ -24,6 +47,20 @@
   pointer-events: auto;
   font: 700 15px/1 ui-sans-serif, sans-serif;
   transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.chatgpt-saved-chat-marker[data-count]:not([data-count="1"]) {
+  width: auto;
+  min-width: 30px;
+  padding: 0 6px;
+  border-radius: 13px;
+  font-size: 12px;
+  letter-spacing: -0.5px;
+}
+
+.chatgpt-saved-chat-marker[data-active="true"] {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 .chatgpt-saved-chat-marker[hidden] {
@@ -64,7 +101,6 @@
   -webkit-line-clamp: 3;
 }
 
-.chatgpt-saved-chat-popover-actions { display: flex; gap: 8px; }
 .chatgpt-saved-chat-popover button {
   all: initial;
   box-sizing: border-box;
@@ -73,11 +109,89 @@
   cursor: pointer;
   font: 600 12px/1 ui-sans-serif, sans-serif;
 }
+
+.chatgpt-saved-chat-popover-heading {
+  margin-bottom: 8px;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chatgpt-saved-chat-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chatgpt-saved-chat-popover-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.chatgpt-saved-chat-choice {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.35 !important;
+  background: #f4f4f4 !important;
+  color: #222 !important;
+}
+
+.chatgpt-saved-chat-choice:hover,
+.chatgpt-saved-chat-choice:focus-visible {
+  background: #e8f0ff !important;
+  outline: 1px solid #3b82f6;
+}
+
+.chatgpt-saved-chat-row-delete {
+  width: 28px;
+  padding-inline: 0 !important;
+  color: #b42318 !important;
+  text-align: center;
+}
+
+.chatgpt-saved-chat-popover-actions { display: flex; gap: 8px; }
 .chatgpt-saved-chat-open { background: #111 !important; color: white !important; }
 .chatgpt-saved-chat-delete { color: #b42318 !important; }
 
+@media (prefers-color-scheme: dark) {
+  .chatgpt-saved-chat-popover {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: #242424;
+    color: #f5f5f5;
+  }
+
+  .chatgpt-saved-chat-popover blockquote,
+  .chatgpt-saved-chat-popover-heading {
+    color: #c9c9c9;
+  }
+
+  .chatgpt-saved-chat-choice {
+    background: #333 !important;
+    color: #f5f5f5 !important;
+  }
+
+  .chatgpt-saved-chat-choice:hover,
+  .chatgpt-saved-chat-choice:focus-visible {
+    background: #263752 !important;
+  }
+}
+
 ::highlight(chatgpt-saved-text-chats) {
-  background: color-mix(in srgb, #f6d365 48%, transparent);
-  text-decoration: underline solid #d49b00 1.5px;
+  background-color: rgba(246, 211, 101, 0.24);
+  text-decoration: underline solid color-mix(in srgb, #d49b00 72%, transparent) 1px;
+  text-underline-offset: 2px;
+}
+
+::highlight(chatgpt-saved-text-chats-inactive) {
+  background-color: rgba(246, 211, 101, 0.1);
+  text-decoration: underline solid rgba(212, 155, 0, 0.38) 1px;
+  text-underline-offset: 2px;
+}
+
+::highlight(chatgpt-saved-text-chat-active) {
+  background-color: rgba(96, 165, 250, 0.34);
+  text-decoration: underline solid #3b82f6 2px;
   text-underline-offset: 2px;
 }

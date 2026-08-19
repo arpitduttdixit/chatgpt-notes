@@ -4,9 +4,16 @@
   const STORAGE_KEY = "chatgptSavedTextChatsV1";
   const LAYER_ID = "chatgpt-saved-chat-layer";
   const HIGHLIGHT_NAME = "chatgpt-saved-text-chats";
+  const INACTIVE_HIGHLIGHT_NAME = "chatgpt-saved-text-chats-inactive";
+  const ACTIVE_HIGHLIGHT_NAME = "chatgpt-saved-text-chat-active";
   const MAX_CONTEXT = 48;
+  const MARKER_SIZE = 25;
+  const GROUP_DISTANCE = 18;
   let lastAnchor = null;
   let rendered = [];
+  let markerGroups = [];
+  let activeItems = [];
+  let openPopover = null;
   let renderTimer = null;
   let selectionTimer = null;
   let renderedUrl = "";
@@ -189,28 +196,82 @@
     return layer;
   };
 
-  const positionMarker = (item) => {
+  const rangeRects = (item) => [...item.range.getClientRects()].filter((rect) => rect.width || rect.height);
+
+  const endpointPlacement = (item) => {
+    const rect = rangeRects(item).at(-1);
+    if (!rect) return null;
+    return { left: rect.right + 5, rect, top: rect.top - 3 };
+  };
+
+  const isMarkerPlacementVisible = ({ left, rect, top }, markerWidth = MARKER_SIZE) => rect.top >= 0
+    && rect.bottom <= innerHeight
+    && rect.left >= 0
+    && rect.right <= innerWidth
+    && left >= 0
+    && top >= 0
+    && left + markerWidth <= innerWidth
+    && top + MARKER_SIZE <= innerHeight;
+
+  const positionStartCap = (item) => {
     const rects = [...item.range.getClientRects()].filter((rect) => rect.width || rect.height);
-    const rect = rects.at(-1);
+    const rect = rects[0];
     if (!rect) {
-      item.marker.hidden = true;
+      item.startCap.hidden = true;
       return;
     }
-    const left = rect.right + 5;
-    const top = rect.top - 3;
-    const markerSize = 25;
+    const left = rect.left - 4;
     const isFullyVisible = rect.top >= 0
       && rect.bottom <= innerHeight
       && rect.left >= 0
       && rect.right <= innerWidth
       && left >= 0
-      && top >= 0
-      && left + markerSize <= innerWidth
-      && top + markerSize <= innerHeight;
-    item.marker.hidden = !isFullyVisible;
+      && left + 3 <= innerWidth;
+    item.startCap.hidden = !isFullyVisible;
     if (!isFullyVisible) return;
-    item.marker.style.left = `${left}px`;
-    item.marker.style.top = `${top}px`;
+    item.startCap.style.height = `${Math.max(12, Math.min(24, rect.height))}px`;
+    item.startCap.style.left = `${left}px`;
+    item.startCap.style.top = `${rect.top}px`;
+  };
+
+  const clearActiveItems = () => {
+    activeItems = [];
+    CSS.highlights?.delete(ACTIVE_HIGHLIGHT_NAME);
+    CSS.highlights?.delete(INACTIVE_HIGHLIGHT_NAME);
+    if (CSS.highlights && rendered.length) {
+      CSS.highlights.delete(HIGHLIGHT_NAME);
+      CSS.highlights.set(HIGHLIGHT_NAME, new Highlight(...rendered.map((item) => item.range)));
+    }
+    for (const item of rendered) item.startCap.dataset.active = "false";
+    for (const group of markerGroups) group.marker.dataset.active = "false";
+  };
+
+  const activateItems = (items) => {
+    activeItems = items;
+    if (CSS.highlights && items.length) {
+      const activeSet = new Set(items);
+      const inactiveRanges = rendered
+        .filter((item) => !activeSet.has(item))
+        .map((item) => item.range);
+      CSS.highlights.delete(HIGHLIGHT_NAME);
+      CSS.highlights.delete(INACTIVE_HIGHLIGHT_NAME);
+      CSS.highlights.delete(ACTIVE_HIGHLIGHT_NAME);
+      if (inactiveRanges.length) {
+        CSS.highlights.set(INACTIVE_HIGHLIGHT_NAME, new Highlight(...inactiveRanges));
+      }
+      CSS.highlights.set(ACTIVE_HIGHLIGHT_NAME, new Highlight(...items.map((item) => item.range)));
+    }
+    const activeSet = new Set(items);
+    for (const item of rendered) item.startCap.dataset.active = String(activeSet.has(item));
+    for (const group of markerGroups) {
+      group.marker.dataset.active = String(group.items.some((item) => activeSet.has(item)));
+    }
+  };
+
+  const closePopover = () => {
+    openPopover?.remove();
+    openPopover = null;
+    clearActiveItems();
   };
 
   const removeAnnotation = async (id) => {
@@ -219,44 +280,159 @@
     await chrome.storage.local.set({ [STORAGE_KEY]: records });
   };
 
-  const showPopover = (item) => {
+  const openConversation = (item) => {
+    chrome.runtime.sendMessage({
+      type: "CHATGPT_OPEN_SAVED_TEXT_CHAT",
+      conversationId: item.record.conversationId,
+    }).catch(() => {});
+    closePopover();
+  };
+
+  const excerpt = (text, length = 110) => {
+    const normalized = text.replace(/\s+/g, " ").trim();
+    return normalized.length <= length ? normalized : `${normalized.slice(0, length - 1)}…`;
+  };
+
+  const showPopover = (group) => {
     const layer = ensureLayer();
-    layer.querySelector(".chatgpt-saved-chat-popover")?.remove();
+    closePopover();
     const popover = document.createElement("div");
     popover.className = "chatgpt-saved-chat-popover";
-    const quote = document.createElement("blockquote");
-    quote.textContent = `“${item.record.selectedText}”`;
-    const actions = document.createElement("div");
-    actions.className = "chatgpt-saved-chat-popover-actions";
-    const open = document.createElement("button");
-    open.className = "chatgpt-saved-chat-open";
-    open.textContent = "Open saved chat";
-    open.addEventListener("click", () => {
-      chrome.runtime.sendMessage({
-        type: "CHATGPT_OPEN_SAVED_TEXT_CHAT",
-        conversationId: item.record.conversationId,
-      }).catch(() => {});
-      popover.remove();
-    });
-    const remove = document.createElement("button");
-    remove.className = "chatgpt-saved-chat-delete";
-    remove.textContent = "Remove";
-    remove.addEventListener("click", () => removeAnnotation(item.record.id));
-    actions.append(open, remove);
-    popover.append(quote, actions);
+    openPopover = popover;
+
+    if (group.items.length === 1) {
+      const [item] = group.items;
+      const quote = document.createElement("blockquote");
+      quote.textContent = `“${item.record.selectedText}”`;
+      const actions = document.createElement("div");
+      actions.className = "chatgpt-saved-chat-popover-actions";
+      const open = document.createElement("button");
+      open.className = "chatgpt-saved-chat-open";
+      open.textContent = "Open saved chat";
+      open.addEventListener("click", () => openConversation(item));
+      const remove = document.createElement("button");
+      remove.className = "chatgpt-saved-chat-delete";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", async () => {
+        closePopover();
+        await removeAnnotation(item.record.id);
+      });
+      actions.append(open, remove);
+      popover.append(quote, actions);
+      activateItems([item]);
+    } else {
+      const heading = document.createElement("div");
+      heading.className = "chatgpt-saved-chat-popover-heading";
+      heading.textContent = `${group.items.length} saved chats here`;
+      const list = document.createElement("div");
+      list.className = "chatgpt-saved-chat-popover-list";
+      for (const item of group.items) {
+        const row = document.createElement("div");
+        row.className = "chatgpt-saved-chat-popover-row";
+        const choice = document.createElement("button");
+        choice.className = "chatgpt-saved-chat-choice";
+        choice.textContent = excerpt(item.record.selectedText);
+        choice.title = item.record.selectedText;
+        choice.addEventListener("pointerenter", () => activateItems([item]));
+        choice.addEventListener("focus", () => activateItems([item]));
+        choice.addEventListener("click", () => openConversation(item));
+        const remove = document.createElement("button");
+        remove.className = "chatgpt-saved-chat-row-delete";
+        remove.textContent = "×";
+        remove.title = "Remove this saved chat";
+        remove.setAttribute("aria-label", `Remove saved chat about: ${excerpt(item.record.selectedText, 70)}`);
+        remove.addEventListener("pointerenter", () => activateItems([item]));
+        remove.addEventListener("focus", () => activateItems([item]));
+        remove.addEventListener("click", async () => {
+          closePopover();
+          await removeAnnotation(item.record.id);
+        });
+        row.append(choice, remove);
+        list.append(row);
+      }
+      list.addEventListener("pointerleave", () => activateItems(group.items));
+      popover.append(heading, list);
+      activateItems(group.items);
+    }
+
     layer.append(popover);
-    const markerRect = item.marker.getBoundingClientRect();
+    const markerRect = group.marker.getBoundingClientRect();
     popover.style.left = `${Math.min(innerWidth - popover.offsetWidth - 12, Math.max(12, markerRect.left - popover.offsetWidth + 25))}px`;
     popover.style.top = `${Math.min(innerHeight - popover.offsetHeight - 12, markerRect.bottom + 8)}px`;
+  };
+
+  const makeMarkerGroup = (items) => {
+    const marker = document.createElement("button");
+    marker.className = "chatgpt-saved-chat-marker";
+    marker.type = "button";
+    marker.textContent = items.length > 1 ? `✦${items.length}` : "✦";
+    marker.dataset.count = String(items.length);
+    marker.title = items.length > 1
+      ? `${items.length} saved ChatGPT conversations here`
+      : "Open saved ChatGPT conversation";
+    marker.setAttribute("aria-label", marker.title);
+    const group = { items, marker };
+    marker.addEventListener("pointerenter", () => activateItems(items));
+    marker.addEventListener("pointerleave", () => {
+      if (!openPopover) clearActiveItems();
+    });
+    marker.addEventListener("focus", () => activateItems(items));
+    marker.addEventListener("blur", () => {
+      if (!openPopover) clearActiveItems();
+    });
+    marker.addEventListener("click", () => showPopover(group));
+    ensureLayer().append(marker);
+    return group;
+  };
+
+  const groupMarkers = (items) => {
+    const remaining = items.map((item) => ({ item, placement: endpointPlacement(item) }));
+    const groups = [];
+    while (remaining.length) {
+      const seed = remaining.shift();
+      if (!seed.placement) continue;
+      const members = [seed.item];
+      for (let i = remaining.length - 1; i >= 0; i -= 1) {
+        const candidate = remaining[i];
+        if (!candidate.placement) continue;
+        const nearX = Math.abs(candidate.placement.left - seed.placement.left) <= GROUP_DISTANCE;
+        const nearY = Math.abs(candidate.placement.top - seed.placement.top) <= GROUP_DISTANCE;
+        if (nearX && nearY) {
+          members.push(candidate.item);
+          remaining.splice(i, 1);
+        }
+      }
+      groups.push(makeMarkerGroup(members));
+    }
+    return groups;
+  };
+
+  const positionDecorations = () => {
+    for (const item of rendered) positionStartCap(item);
+    for (const group of markerGroups) {
+      const placements = group.items.map(endpointPlacement).filter(Boolean);
+      const placement = placements.find((candidate) => isMarkerPlacementVisible(
+        candidate,
+        group.items.length > 1 ? 32 : MARKER_SIZE,
+      ));
+      group.marker.hidden = placement == null;
+      if (!placement) continue;
+      group.marker.style.left = `${placement.left}px`;
+      group.marker.style.top = `${placement.top}px`;
+    }
   };
 
   const render = async () => {
     renderTimer = null;
     renderedUrl = canonicalUrl();
     const layer = ensureLayer();
+    closePopover();
     layer.replaceChildren();
     rendered = [];
+    markerGroups = [];
     CSS.highlights?.delete(HIGHLIGHT_NAME);
+    CSS.highlights?.delete(INACTIVE_HIGHLIGHT_NAME);
+    CSS.highlights?.delete(ACTIVE_HIGHLIGHT_NAME);
     const stored = await chrome.storage.local.get(STORAGE_KEY);
     const records = (stored[STORAGE_KEY] || []).filter((record) => {
       try { return canonicalUrl(record.tabUrl || record.url) === canonicalUrl(); }
@@ -269,20 +445,17 @@
       const range = rangeFromStructuralAnchor(record.anchor)
         || resolveAnchor(record.anchor, record.selectedText, index);
       if (!range) continue;
-      const marker = document.createElement("button");
-      marker.className = "chatgpt-saved-chat-marker";
-      marker.type = "button";
-      marker.textContent = "✦";
-      marker.title = "Open saved ChatGPT conversation";
-      marker.setAttribute("aria-label", `Open saved ChatGPT conversation about: ${record.selectedText.slice(0, 80)}`);
-      const item = { marker, range, record };
-      marker.addEventListener("click", () => showPopover(item));
-      layer.append(marker);
+      const startCap = document.createElement("span");
+      startCap.className = "chatgpt-saved-chat-start-cap";
+      startCap.setAttribute("aria-hidden", "true");
+      const item = { range, record, startCap };
+      layer.append(startCap);
       ranges.push(range);
       rendered.push(item);
     }
     if (CSS.highlights && ranges.length) CSS.highlights.set(HIGHLIGHT_NAME, new Highlight(...ranges));
-    rendered.forEach(positionMarker);
+    markerGroups = groupMarkers(rendered);
+    positionDecorations();
   };
 
   const scheduleRender = () => {
@@ -324,8 +497,18 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes[STORAGE_KEY]) scheduleRender();
   });
-  addEventListener("resize", () => rendered.forEach(positionMarker), { passive: true });
-  addEventListener("scroll", () => rendered.forEach(positionMarker), { capture: true, passive: true });
+  addEventListener("resize", scheduleRender, { passive: true });
+  addEventListener("scroll", () => {
+    if (openPopover) closePopover();
+    positionDecorations();
+  }, { capture: true, passive: true });
+  document.addEventListener("pointerdown", (event) => {
+    if (openPopover && !openPopover.contains(event.target)
+      && !event.target.closest?.(".chatgpt-saved-chat-marker")) closePopover();
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && openPopover) closePopover();
+  }, true);
   addEventListener("popstate", scheduleRender);
   addEventListener("hashchange", scheduleRender);
   setInterval(() => {
